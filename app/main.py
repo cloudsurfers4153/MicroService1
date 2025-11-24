@@ -8,9 +8,22 @@ from datetime import timedelta
 from app.config import settings
 
 # create tables if not using alembic (for dev only)
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
+# from app.database import init_db
+# init_db()
+
 
 app = FastAPI(title="MS1 - Users Service")
+from app.database import init_db, close_database
+# 启动时初始化（创建表）
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
+# 关闭时清理资源（关闭 connector / engine）
+@app.on_event("shutdown")
+def on_shutdown():
+    close_database()
 
 @app.post("/users", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
 def register_user(user_in: schemas.UserCreate, response: Response, db: Session = Depends(get_db)):
