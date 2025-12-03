@@ -10,4 +10,3 @@ alembic==1.13.3
 pymysql==1.1.1
 email-validator==2.2.0
 cloud-sql-python-connector[pymysql]==1.11.0
-google-auth-oauthlib

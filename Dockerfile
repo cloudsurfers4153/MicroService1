@@ -7,6 +7,9 @@ RUN apt-get update && apt-get install -y build-essential gcc
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 单独安装 google-auth-oauthlib
+RUN pip install --no-cache-dir google-auth-oauthlib
+
 COPY ./app ./app
 
 ENV PYTHONUNBUFFERED=1
