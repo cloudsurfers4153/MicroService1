@@ -275,20 +275,20 @@ def google_logout(payload: dict = None, db: Session = Depends(get_db), current: 
 
 
 # -------- test --------
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
+#from fastapi.staticfiles import StaticFiles
+#from fastapi.middleware.cors import CORSMiddleware
 
 # Allow http local testing of OAuth (do not enable in production)
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+#os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 # Allow CORS for development (adjust origins in production)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # for development only; use specific origins in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+#app.add_middleware(
+#    CORSMiddleware,
+#    allow_origins=["*"],  # for development only; use specific origins in production
+#    allow_credentials=True,
+#    allow_methods=["*"],
+#    allow_headers=["*"],
+#)
 
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+#app.mount("/static", StaticFiles(directory="static"), name="static")
