@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     INSTANCE_CONNECTION_NAME: str = os.getenv(
         "INSTANCE_CONNECTION_NAME",
-        "coms4153-cloud-surfers:us-central1:a123",
+        "coms4153-cloud-surfers:us-central1:microservice1-user",
     )
 
 
