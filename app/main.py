@@ -36,7 +36,7 @@ def on_shutdown():
 
 # Google OAuth configuration (override with ENV variables if needed)
 GOOGLE_CLIENT_SECRETS_FILE = os.environ.get("GOOGLE_CLIENT_SECRETS_FILE", "client_secret.json")
-GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "https://compositemicroservice-608197196549.us-central1.run.app/composite/auth/google/callback")
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
 GOOGLE_SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
@@ -274,21 +274,21 @@ def google_logout(payload: dict = None, db: Session = Depends(get_db), current: 
     return {"msg": "ok", "user_id": current.id, "google_revoked": revoked}
 
 
-# -------- test --------
-#from fastapi.staticfiles import StaticFiles
-#from fastapi.middleware.cors import CORSMiddleware
+#-------- test --------
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
-# Allow http local testing of OAuth (do not enable in production)
-#os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+#Allow http local testing of OAuth (do not enable in production)
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
-# Allow CORS for development (adjust origins in production)
-#app.add_middleware(
-#    CORSMiddleware,
-#    allow_origins=["*"],  # for development only; use specific origins in production
-#    allow_credentials=True,
-#    allow_methods=["*"],
-#    allow_headers=["*"],
-#)
+#Allow CORS for development (adjust origins in production)
+app.add_middleware(
+   CORSMiddleware,
+   allow_origins=["*"],  # for development only; use specific origins in production
+   allow_credentials=True,
+   allow_methods=["*"],
+   allow_headers=["*"],
+)
 
 
-#app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
