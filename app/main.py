@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 from app.database import init_db, close_database
 
+
+from pathlib import Path
+import os, json, logging
+
 app = FastAPI(title="MS1 - Users Service")
 
 # Run database initialization during application startup (create tables if needed)
@@ -36,7 +40,7 @@ def on_shutdown():
 
 # Google OAuth configuration (override with ENV variables if needed)
 GOOGLE_CLIENT_SECRETS_FILE = os.environ.get("GOOGLE_CLIENT_SECRETS_FILE", "client_secret.json")
-GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "https://microservice1-608197196549.us-central1.run.app/auth/google/callback")
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "https://microservice1-608197196549.us-central1.run.app/auth/google/callback",)
 GOOGLE_SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
@@ -140,9 +144,18 @@ def delete_user(user_id: str, db: Session = Depends(get_db), current: models.Use
 def google_auth_url():
     """
     Create a Google OAuth Flow and return the authorization URL and state.
-    The frontend should redirect the user to the returned auth_url.
+    Frontend should redirect the user to the returned auth_url.
     Response: { "auth_url": "...", "state": "..." }
     """
+    from pathlib import Path
+    import os, json, logging
+
+    BASE_DIR = Path(__file__).resolve().parent  # app 目录
+    logging.info(f"BASE_DIR = {BASE_DIR}")
+    secrets_path = os.environ.get("GOOGLE_CLIENT_SECRETS_FILE", str(BASE_DIR / "client_secret.json"))
+    logging.info(f"Using GOOGLE_CLIENT_SECRETS_FILE = {secrets_path}")
+    logging.info(f"Exists? {Path(secrets_path).exists()}")
+
     try:
         flow = Flow.from_client_secrets_file(
             GOOGLE_CLIENT_SECRETS_FILE,
