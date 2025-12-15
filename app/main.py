@@ -200,12 +200,14 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
       }
     """
     url = str(request.url)
+
+    # Fix for Cloud Run: internal requests use HTTP but external is HTTPS
+    # Check X-Forwarded-Proto header set by the load balancer
+    if request.headers.get("x-forwarded-proto") == "https" and url.startswith("http://"):
+        url = url.replace("http://", "https://", 1)
+
     state = request.query_params.get("state")
     if not state or not _state_store.pop(state, None):
-        # Fix for Cloud Run: internal requests use HTTP but external is HTTPS
-        # Check X-Forwarded-Proto header set by the load balancer
-        if request.headers.get("x-forwarded-proto") == "https" and url.startswith("http://"):
-            url = url.replace("http://", "https://", 1)
         raise HTTPException(status_code=400, detail="Invalid or missing OAuth state.")
     try:
         flow = Flow.from_client_config(
