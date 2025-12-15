@@ -21,8 +21,7 @@ logger = logging.getLogger(__name__)
 from app.database import init_db, close_database
 
 
-from pathlib import Path
-import os, json, logging
+
 
 app = FastAPI(title="MS1 - Users Service")
 
@@ -148,26 +147,22 @@ def google_auth_url():
     Response: { "auth_url": "...", "state": "..." }
     """
     from pathlib import Path
-    import os, json, logging
+    import os
+    from datetime import datetime
 
     BASE_DIR = Path(__file__).resolve().parent  # app 目录
-    logging.info(f"BASE_DIR = {BASE_DIR}")
-    secrets_path = os.environ.get("GOOGLE_CLIENT_SECRETS_FILE", str(BASE_DIR / "client_secret.json"))
-    logging.info(f"Using GOOGLE_CLIENT_SECRETS_FILE = {secrets_path}")
-    logging.info(f"Exists? {Path(secrets_path).exists()}")
+    secrets_path = os.environ.get(
+        "GOOGLE_CLIENT_SECRETS_FILE",
+        str(BASE_DIR / "client_secret.json")
+    )
 
-    try:
-        flow = Flow.from_client_secrets_file(
-            GOOGLE_CLIENT_SECRETS_FILE,
-            scopes=GOOGLE_SCOPES,
-            redirect_uri=GOOGLE_REDIRECT_URI,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create OAuth flow: {e}")
+    output_file = BASE_DIR / "secrets_info.txt"
 
-    auth_url, state = flow.authorization_url(access_type="offline", prompt="consent")
-    _state_store[state] = True
-    return {"auth_url": auth_url, "state": state}
+    with output_file.open("a", encoding="utf-8") as f:
+        f.write(f"=== {datetime.now()} ===\n")
+        f.write(f"BASE_DIR = {BASE_DIR}\n")
+        f.write(f"Using GOOGLE_CLIENT_SECRETS_FILE = {secrets_path}\n")
+        f.write(f"Exists? {Path(secrets_path).exists()}\n\n")
 
 
 @app.get("/auth/google/callback")
