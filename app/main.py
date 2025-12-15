@@ -141,41 +141,48 @@ def delete_user(user_id: str, db: Session = Depends(get_db), current: models.Use
 
 @app.get("/auth/google/url")
 def google_auth_url():
-    """
-    Create a Google OAuth Flow and return the authorization URL and state.
-    Frontend should redirect the user to the returned auth_url.
-    Response: { "auth_url": "...", "state": "..." }
-    """
-    from pathlib import Path
-    import os
-    from datetime import datetime
+    BASE_DIR = Path(__file__).resolve().parent
 
-    BASE_DIR = Path(__file__).resolve().parent  # app 目录
     secrets_path = os.environ.get(
         "GOOGLE_CLIENT_SECRETS_FILE",
         str(BASE_DIR / "client_secret.json")
     )
 
-    output_file = BASE_DIR / "secrets_info.txt"
-
-    with output_file.open("a", encoding="utf-8") as f:
-        f.write(f"=== {datetime.now()} ===\n")
-        f.write(f"BASE_DIR = {BASE_DIR}\n")
-        f.write(f"Using GOOGLE_CLIENT_SECRETS_FILE = {secrets_path}\n")
-        f.write(f"Exists? {Path(secrets_path).exists()}\n\n")
+    debug_info = {
+        "time": datetime.now().isoformat(),
+        "BASE_DIR": str(BASE_DIR),
+        "GOOGLE_CLIENT_SECRETS_FILE": secrets_path,
+        "secrets_file_exists": Path(secrets_path).exists(),
+    }
 
     try:
         flow = Flow.from_client_secrets_file(
-            GOOGLE_CLIENT_SECRETS_FILE,
+            secrets_path,
             scopes=GOOGLE_SCOPES,
             redirect_uri=GOOGLE_REDIRECT_URI,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create OAuth flow: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Failed to create OAuth flow",
+                "exception": str(e),
+                "debug": debug_info,
+            }
+        )
 
-    auth_url, state = flow.authorization_url(access_type="offline", prompt="consent")
+    auth_url, state = flow.authorization_url(
+        access_type="offline",
+        prompt="consent"
+    )
+
     _state_store[state] = True
-    return {"auth_url": auth_url, "state": state}
+
+    return {
+        "auth_url": auth_url,
+        "state": state,
+        "debug": debug_info,
+    }
 
 
 @app.get("/auth/google/callback")
