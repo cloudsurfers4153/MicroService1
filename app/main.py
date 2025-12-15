@@ -8,7 +8,6 @@ from datetime import timedelta
 from app.config import settings
 
 import os
-import json
 import logging
 import requests
 
@@ -19,9 +18,6 @@ from google.auth.transport.requests import Request as GoogleRequest
 logger = logging.getLogger(__name__)
 
 from app.database import init_db, close_database
-
-
-
 
 app = FastAPI(title="MS1 - Users Service")
 
@@ -37,9 +33,33 @@ def on_shutdown():
     close_database()
 
 
-# Google OAuth configuration (override with ENV variables if needed)
-GOOGLE_CLIENT_SECRETS_FILE = os.environ.get("GOOGLE_CLIENT_SECRETS_FILE", "/secret/google-client-secret")
-GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "https://microservice1-608197196549.us-central1.run.app/auth/google/callback",)
+# ---------------- Replace reading JSON file: embed client secrets dict here ----------------
+# JSON content provided by the user has been pasted below as a Python dict.
+# If you want to override values via environment variables, you can still do so (example shown for redirect URI).
+CLIENT_SECRETS = {
+    "web": {
+        "client_id": "608197196549-a51rsrgcgujvp8b765hj2pm1l40td4t1.apps.googleusercontent.com",
+        "project_id": "coms4153-cloud-surfers",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_secret": "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",
+        "redirect_uris": [
+            "http://localhost:8000/auth/google/callback",
+            "https://microservice1-608197196549.us-central1.run.app/auth/google/callback",
+            "https://compositemicroservice-608197196549.us-central1.run.app/composite/auth/google/callback",
+            "https://storage.googleapis.com/movie-platform-frontend/index.html",
+            "https://compositemicroservice-608197196549.us-central1.run.app/auth/google/callback"
+        ]
+    }
+}
+
+# Google OAuth configuration (we no longer load from file)
+# You can still override the redirect URI through environment variable if needed.
+GOOGLE_REDIRECT_URI = os.environ.get(
+    "GOOGLE_REDIRECT_URI",
+    "https://microservice1-608197196549.us-central1.run.app/auth/google/callback",
+)
 GOOGLE_SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
@@ -51,18 +71,16 @@ GOOGLE_SCOPES = [
 _state_store = {}
 
 
-def _read_client_id_from_secrets(path: str):
+def _get_client_id_from_config(client_config: dict):
     """
-    Read client_id from the Google client_secret.json file.
+    Extract client_id from the embedded client config dict.
     Return None on failure.
     """
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            cs = json.load(f)
-        client_id = cs.get("web", {}).get("client_id") or cs.get("installed", {}).get("client_id")
+        client_id = client_config.get("web", {}).get("client_id") or client_config.get("installed", {}).get("client_id")
         return client_id
     except Exception as e:
-        logger.warning("Failed to read client secrets file: %s", e)
+        logger.warning("Failed to read client id from embedded config: %s", e)
         return None
 
 
@@ -142,12 +160,13 @@ def delete_user(user_id: str, db: Session = Depends(get_db), current: models.Use
 def google_auth_url():
     """
     Create a Google OAuth Flow and return the authorization URL and state.
-    The frontend should redirect the user to the returned auth_url.
+    Frontend should redirect the user to the returned auth_url.
     Response: { "auth_url": "...", "state": "..." }
     """
     try:
-        flow = Flow.from_client_secrets_file(
-            GOOGLE_CLIENT_SECRETS_FILE,
+        # Use from_client_config to avoid loading from a file
+        flow = Flow.from_client_config(
+            CLIENT_SECRETS,
             scopes=GOOGLE_SCOPES,
             redirect_uri=GOOGLE_REDIRECT_URI,
         )
@@ -186,8 +205,8 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid or missing OAuth state.")
 
     try:
-        flow = Flow.from_client_secrets_file(
-            GOOGLE_CLIENT_SECRETS_FILE,
+        flow = Flow.from_client_config(
+            CLIENT_SECRETS,
             scopes=GOOGLE_SCOPES,
             state=state,
             redirect_uri=GOOGLE_REDIRECT_URI,
@@ -202,7 +221,7 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
 
     credentials = flow.credentials
 
-    client_id = _read_client_id_from_secrets(GOOGLE_CLIENT_SECRETS_FILE)
+    client_id = _get_client_id_from_config(CLIENT_SECRETS)
     try:
         id_info = id_token.verify_oauth2_token(credentials.id_token, GoogleRequest(), client_id)
     except Exception as e:
