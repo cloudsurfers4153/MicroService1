@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Response, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+import urllib.parse
 from sqlalchemy.orm import Session
 from app import crud, models, schemas
 from app.deps import get_db, get_current_user
@@ -249,25 +250,30 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     access_token_expires = timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
     app_token = create_access_token(user.id, expires_delta=access_token_expires)
 
-    response = {
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "username": getattr(user, "username", None),
-            "full_name": getattr(user, "full_name", None),
-            "is_new": created,
-        },
-        "google_tokens": {
-            "access_token": getattr(credentials, "token", None),
-            "refresh_token": getattr(credentials, "refresh_token", None),
-            "id_token": getattr(credentials, "id_token", None),
-            "expiry": credentials.expiry.isoformat() if credentials.expiry else None,
-        },
-        "id_info": id_info,
+    # Redirect to frontend with token and user info as query parameters
+    frontend_url = os.environ.get(
+        "FRONTEND_REDIRECT_URL",
+        "https://storage.googleapis.com/movie-platform-frontend/login.html"
+    )
+    
+    params = urllib.parse.urlencode({
+        "google_auth": "success",
         "access_token": app_token,
         "token_type": "bearer",
-    }
-    return JSONResponse(response)
+        "user_id": user.id,
+        "email": user.email,
+        "username": getattr(user, "username", None) or "",
+        "full_name": getattr(user, "full_name", None) or "",
+        "is_new": str(created).lower(),
+        # Google tokens
+        "google_token": getattr(credentials, "token", None) or "",
+        "google_refresh_token": getattr(credentials, "refresh_token", None) or "",
+        "google_id_token": getattr(credentials, "id_token", None) or "",
+        "google_token_expiry": credentials.expiry.isoformat() if credentials.expiry else ""
+    })
+    
+    redirect_url = f"{frontend_url}?{params}"
+    return RedirectResponse(url=redirect_url)
 
 
 @app.post("/auth/google/logout")
