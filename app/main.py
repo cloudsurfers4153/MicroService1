@@ -164,6 +164,19 @@ def google_auth_url():
         f.write(f"Using GOOGLE_CLIENT_SECRETS_FILE = {secrets_path}\n")
         f.write(f"Exists? {Path(secrets_path).exists()}\n\n")
 
+    try:
+        flow = Flow.from_client_secrets_file(
+            GOOGLE_CLIENT_SECRETS_FILE,
+            scopes=GOOGLE_SCOPES,
+            redirect_uri=GOOGLE_REDIRECT_URI,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create OAuth flow: {e}")
+
+    auth_url, state = flow.authorization_url(access_type="offline", prompt="consent")
+    _state_store[state] = True
+    return {"auth_url": auth_url, "state": state}
+
 
 @app.get("/auth/google/callback")
 def google_callback(request: Request, db: Session = Depends(get_db)):
